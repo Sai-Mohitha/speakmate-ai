@@ -1,0 +1,299 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 1: Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Reusable hardened primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isVerifiedOwner(userId) {
+      return isVerified() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidMode(mode) {
+      return mode is string && mode in [
+        'Friendly Conversation',
+        'HR Interview Practice',
+        'Technical Interview Practice',
+        'Public Speaking Practice',
+        'Professional Workplace Communication'
+      ];
+    }
+
+    function isValidLevel(level) {
+      return level is string && level in ['Beginner', 'Intermediate', 'Advanced'];
+    }
+
+    function isValidGoalsList(goals) {
+      return goals is list
+        && goals.size() <= 10
+        && (goals.size() == 0 || (goals[0] is string && goals[0].size() <= 120));
+    }
+
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll([
+          'uid',
+          'name',
+          'email',
+          'role',
+          'proficiencyLevel',
+          'communicationGoals',
+          'preferredMode',
+          'dailyGoalMinutes',
+          'preferredAvailability',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid',
+          'name',
+          'email',
+          'role',
+          'proficiencyLevel',
+          'communicationGoals',
+          'preferredMode',
+          'dailyGoalMinutes',
+          'preferredAvailability',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.uid == userId
+        && isValidId(data.uid)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 100
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 200
+        && data.role is string && data.role in ['Student', 'Working Professional']
+        && isValidLevel(data.proficiencyLevel)
+        && isValidGoalsList(data.communicationGoals)
+        && isValidMode(data.preferredMode)
+        && data.dailyGoalMinutes is int && data.dailyGoalMinutes >= 5 && data.dailyGoalMinutes <= 180
+        && data.preferredAvailability is string && data.preferredAvailability.size() >= 1 && data.preferredAvailability.size() <= 80
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidPracticeSession(data, userId, sessionId) {
+      return data.keys().hasAll([
+          'id',
+          'userId',
+          'mode',
+          'level',
+          'startedAt',
+          'endedAt',
+          'durationMinutes',
+          'messageCount',
+          'corrections',
+          'vocabularyLearned',
+          'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'id',
+          'userId',
+          'mode',
+          'level',
+          'startedAt',
+          'endedAt',
+          'durationMinutes',
+          'messageCount',
+          'corrections',
+          'vocabularyLearned',
+          'summary',
+          'createdAt'
+        ])
+        && data.id == sessionId
+        && isValidId(data.id)
+        && data.userId == userId
+        && isValidMode(data.mode)
+        && isValidLevel(data.level)
+        && data.startedAt is string && data.startedAt.size() >= 10 && data.startedAt.size() <= 64
+        && data.endedAt is string && data.endedAt.size() >= 10 && data.endedAt.size() <= 64
+        && data.durationMinutes is int && data.durationMinutes >= 0 && data.durationMinutes <= 600
+        && data.messageCount is int && data.messageCount >= 0 && data.messageCount <= 500
+        && data.corrections is list && data.corrections.size() <= 50
+        && (data.corrections.size() == 0 || data.corrections[0] is map)
+        && data.vocabularyLearned is list && data.vocabularyLearned.size() <= 50
+        && (data.vocabularyLearned.size() == 0 || data.vocabularyLearned[0] is map)
+        && (!('summary' in data) || data.summary is map)
+        && data.createdAt is timestamp;
+    }
+
+    function isValidMentorshipBooking(data, userId, bookingId) {
+      return data.keys().hasAll([
+          'id',
+          'userId',
+          'coachId',
+          'coachName',
+          'coachExpertise',
+          'preferredDate',
+          'preferredTime',
+          'sessionPurpose',
+          'status',
+          'isDemoBooking',
+          'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'id',
+          'userId',
+          'coachId',
+          'coachName',
+          'coachExpertise',
+          'preferredDate',
+          'preferredTime',
+          'sessionPurpose',
+          'status',
+          'isDemoBooking',
+          'createdAt'
+        ])
+        && data.id == bookingId
+        && isValidId(data.id)
+        && data.userId == userId
+        && isValidId(data.coachId)
+        && data.coachName is string && data.coachName.size() >= 1 && data.coachName.size() <= 100
+        && data.coachExpertise is string && data.coachExpertise.size() >= 1 && data.coachExpertise.size() <= 160
+        && data.preferredDate is string && data.preferredDate.size() >= 8 && data.preferredDate.size() <= 20
+        && data.preferredTime is string && data.preferredTime.size() >= 3 && data.preferredTime.size() <= 30
+        && data.sessionPurpose is string && data.sessionPurpose.size() >= 8 && data.sessionPurpose.size() <= 600
+        && data.status == 'Demo Request Saved'
+        && data.isDemoBooking == true
+        && data.createdAt is timestamp;
+    }
+
+    function isValidChatMessage(data, userId, messageId) {
+      return data.keys().hasAll([
+          'id',
+          'userId',
+          'role',
+          'text',
+          'persona',
+          'modelUsed',
+          'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'id',
+          'userId',
+          'role',
+          'text',
+          'persona',
+          'modelUsed',
+          'sources',
+          'createdAt'
+        ])
+        && data.id == messageId
+        && isValidId(data.id)
+        && data.userId == userId
+        && data.role is string && data.role in ['user', 'model']
+        && data.text is string && data.text.size() >= 1 && data.text.size() <= 8000
+        && data.persona is string && data.persona.size() >= 1 && data.persona.size() <= 80
+        && data.modelUsed is string && data.modelUsed.size() >= 1 && data.modelUsed.size() <= 80
+        && (!('sources' in data) || (data.sources is list && data.sources.size() <= 15 && (data.sources.size() == 0 || data.sources[0] is map)))
+        && data.createdAt is timestamp;
+    }
+
+    function parentUserExists(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId));
+    }
+
+    // Private User Profile (PII isolated to owner only)
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+      allow create: if isVerifiedOwner(userId)
+        && isValidId(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedOwner(userId)
+        && isValidId(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'name',
+          'role',
+          'proficiencyLevel',
+          'communicationGoals',
+          'preferredMode',
+          'dailyGoalMinutes',
+          'preferredAvailability',
+          'updatedAt'
+        ]);
+      allow delete: if false;
+
+      // Practice Sessions Subcollection (Master Gate enforced)
+      match /practiceSessions/{sessionId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(sessionId);
+        allow list: if isOwner(userId) && resource.data.userId == request.auth.uid;
+        allow create: if isVerifiedOwner(userId)
+          && isValidId(userId)
+          && isValidId(sessionId)
+          && isValidPracticeSession(incoming(), userId, sessionId)
+          && incoming().createdAt == request.time
+          && parentUserExists(userId);
+        allow update: if false;
+        allow delete: if isVerifiedOwner(userId)
+          && isValidId(userId)
+          && isValidId(sessionId)
+          && existing().userId == request.auth.uid;
+      }
+
+      // Mentorship Demo Bookings Subcollection (Master Gate enforced)
+      match /mentorshipBookings/{bookingId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(bookingId);
+        allow list: if isOwner(userId) && resource.data.userId == request.auth.uid;
+        allow create: if isVerifiedOwner(userId)
+          && isValidId(userId)
+          && isValidId(bookingId)
+          && isValidMentorshipBooking(incoming(), userId, bookingId)
+          && incoming().createdAt == request.time
+          && parentUserExists(userId);
+        allow update: if false;
+        allow delete: if isVerifiedOwner(userId)
+          && isValidId(userId)
+          && isValidId(bookingId)
+          && existing().userId == request.auth.uid;
+      }
+
+      // Gemini Multi-Turn Chatbot Messages Subcollection (Master Gate enforced)
+      match /chatMessages/{messageId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(messageId);
+        allow list: if isOwner(userId) && resource.data.userId == request.auth.uid;
+        allow create: if isVerifiedOwner(userId)
+          && isValidId(userId)
+          && isValidId(messageId)
+          && isValidChatMessage(incoming(), userId, messageId)
+          && incoming().createdAt == request.time
+          && parentUserExists(userId);
+        allow update: if false;
+        allow delete: if isVerifiedOwner(userId)
+          && isValidId(userId)
+          && isValidId(messageId)
+          && existing().userId == request.auth.uid;
+      }
+    }
+  }
+}

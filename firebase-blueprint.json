@@ -1,0 +1,150 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated learner profile and communication learning preferences.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "role": { "type": "string", "enum": ["Student", "Working Professional"] },
+        "proficiencyLevel": { "type": "string", "enum": ["Beginner", "Intermediate", "Advanced"] },
+        "communicationGoals": { "type": "array", "description": "Up to 10 selected communication goals" },
+        "preferredMode": {
+          "type": "string",
+          "enum": [
+            "Friendly Conversation",
+            "HR Interview Practice",
+            "Technical Interview Practice",
+            "Public Speaking Practice",
+            "Professional Workplace Communication"
+          ]
+        },
+        "dailyGoalMinutes": { "type": "integer" },
+        "preferredAvailability": { "type": "string", "maxLength": 80 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "uid",
+        "name",
+        "email",
+        "role",
+        "proficiencyLevel",
+        "communicationGoals",
+        "preferredMode",
+        "dailyGoalMinutes",
+        "preferredAvailability",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PracticeSession": {
+      "title": "PracticeSession",
+      "description": "Completed AI English conversation practice session with grammar corrections, vocabulary, and coaching summary.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "Friendly Conversation",
+            "HR Interview Practice",
+            "Technical Interview Practice",
+            "Public Speaking Practice",
+            "Professional Workplace Communication"
+          ]
+        },
+        "level": { "type": "string", "enum": ["Beginner", "Intermediate", "Advanced"] },
+        "startedAt": { "type": "string", "maxLength": 64 },
+        "endedAt": { "type": "string", "maxLength": 64 },
+        "durationMinutes": { "type": "integer" },
+        "messageCount": { "type": "integer" },
+        "corrections": { "type": "array", "description": "Grammar corrections collected during session (max 50)" },
+        "vocabularyLearned": { "type": "array", "description": "Vocabulary terms learned during session (max 50)" },
+        "summary": { "type": "object", "description": "Optional AI post-session summary" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "userId",
+        "mode",
+        "level",
+        "startedAt",
+        "endedAt",
+        "durationMinutes",
+        "messageCount",
+        "corrections",
+        "vocabularyLearned",
+        "createdAt"
+      ]
+    },
+    "MentorshipBooking": {
+      "title": "MentorshipBooking",
+      "description": "Saved mentorship booking request for a sample communication coach.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "coachId": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "coachName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "coachExpertise": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "preferredDate": { "type": "string", "minLength": 8, "maxLength": 20 },
+        "preferredTime": { "type": "string", "minLength": 3, "maxLength": 30 },
+        "sessionPurpose": { "type": "string", "minLength": 8, "maxLength": 600 },
+        "status": { "type": "string", "enum": ["Demo Request Saved"] },
+        "isDemoBooking": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "userId",
+        "coachId",
+        "coachName",
+        "coachExpertise",
+        "preferredDate",
+        "preferredTime",
+        "sessionPurpose",
+        "status",
+        "isDemoBooking",
+        "createdAt"
+      ]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Persisted multi-turn Gemini chatbot message with optional Google Search grounding sources.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "role": { "type": "string", "enum": ["user", "model"] },
+        "text": { "type": "string", "minLength": 1, "maxLength": 8000 },
+        "persona": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "modelUsed": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "sources": { "type": "array", "description": "Optional Google Search grounding links (max 15)" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "role", "text", "persona", "modelUsed", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private learner profile document owned exclusively by userId."
+    },
+    "/users/{userId}/practiceSessions/{sessionId}": {
+      "schema": { "$ref": "#/entities/PracticeSession" },
+      "description": "Completed AI English practice sessions owned by userId."
+    },
+    "/users/{userId}/mentorshipBookings/{bookingId}": {
+      "schema": { "$ref": "#/entities/MentorshipBooking" },
+      "description": "Saved mentorship demo booking requests owned by userId."
+    },
+    "/users/{userId}/chatMessages/{messageId}": {
+      "schema": { "$ref": "#/entities/ChatMessage" },
+      "description": "Multi-turn Gemini chatbot conversation messages owned by userId."
+    }
+  }
+}

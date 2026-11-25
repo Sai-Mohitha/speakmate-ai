@@ -1,0 +1,6 @@
+{
+  "name": "SpeakMate AI",
+  "description": "Practice Conversations. Build Confidence. Communicate Better. An AI-powered English communication development platform for students and working professionals.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
